@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { createRouteHandler } from 'uploadthing/next';
 import { fileRouter } from './core';
+import { originAllowed } from '@/domain/origins';
 
 /**
  * UploadThing's endpoint. The Customer Portal and the CRM upload from their own pages, so their
@@ -10,12 +11,16 @@ const handler = createRouteHandler({ router: fileRouter, config: { token: proces
 
 function cors(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') || '';
-  const allowed = (process.env.FILES_ALLOWED_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean);
-  if (!origin || !allowed.includes(origin)) return {};
+  if (!originAllowed(origin)) {
+    if (origin) console.warn(`[files] upload from ${origin} refused: add it to FILES_ALLOWED_ORIGINS`);
+    return {};
+  }
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'content-type, x-conquer-file-permit, x-uploadthing-package, x-uploadthing-version, traceparent, b3',
+    // What the uploader sends, whatever its version adds.
+    'Access-Control-Allow-Headers': req.headers.get('access-control-request-headers') || 'content-type, x-conquer-file-permit, x-uploadthing-package, x-uploadthing-version, traceparent, b3',
+    'Access-Control-Max-Age': '600',
     Vary: 'Origin',
   };
 }
