@@ -1,0 +1,62 @@
+// Conquer Files (owner, 2026-11-11): the platform's shared file service, the first of the shared
+// services. It keeps the index of every document clients and staff upload (POs first, then ticket,
+// quotation and deal attachments) and hands out upload permits and short-lived download links.
+// The files themselves are in object storage (UploadThing now; Vercel Blob possible later).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// One uploaded file, attached to one record of one app.
+model StoredFile {
+  id             String    @id @default(uuid())
+  /// The app the record belongs to: CRM or CSP.
+  ownerApp       String    @map("owner_app")
+  /// PURCHASE_ORDER, CLIENT_REQUEST, TICKET, QUOTATION, OPPORTUNITY.
+  ownerType      String    @map("owner_type")
+  /// That app's id for the record.
+  ownerId        String    @map("owner_id")
+  /// The name the person gave it.
+  name           String
+  contentType    String    @map("content_type")
+  size           Int
+  /// UPLOADTHING or VERCEL_BLOB.
+  storage        String
+  /// The storage's own key for the file.
+  storageKey     String    @unique @map("storage_key")
+  /// Who uploaded it: STAFF (CRM or CSP user) or CLIENT (Customer Portal).
+  uploadedByKind String    @map("uploaded_by_kind")
+  uploadedById   String?   @map("uploaded_by_id")
+  uploadedByName String?   @map("uploaded_by_name")
+  /// Through which app: CRM, PORTAL or CSP.
+  uploadedVia    String    @map("uploaded_via")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  deletedAt      DateTime? @map("deleted_at")
+  deletedByName  String?   @map("deleted_by_name")
+
+  events FileEvent[]
+
+  @@index([ownerApp, ownerType, ownerId])
+  @@map("stored_files")
+}
+
+/// What happened to a file, for the audit trail: UPLOADED, REJECTED, LINK (a download link
+/// handed out), DELETED.
+model FileEvent {
+  id        Int         @id @default(autoincrement())
+  fileId    String?     @map("file_id")
+  file      StoredFile? @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  action    String
+  /// The calling app (CRM, PORTAL, CSP) and who it said was acting.
+  byApp     String      @map("by_app")
+  byName    String?     @map("by_name")
+  detail    String?
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  @@index([fileId, createdAt])
+  @@map("file_events")
+}
