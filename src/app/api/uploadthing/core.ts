@@ -41,12 +41,14 @@ export const fileRouter = {
       }
       if (!genuine) {
         await remove(file.key).catch(() => {});
-        await prisma.fileEvent.create({ data: { action: 'REJECTED', detail: `${file.name}: not a real ${file.type}`, ...by } });
+        await prisma.fileEvent.create({ data: { action: 'REJECTED', detail: `${file.name}: not what its type says${permit.ownerLabel ? ` (${permit.ownerLabel})` : ''}`, ...by } });
         return { fileId: null, rejected: `${file.name} is not a real ${ALLOWED_TYPES[file.type]?.label || 'file'} and was not kept.` };
       }
       const saved = await prisma.storedFile.create({
         data: {
-          ownerApp: permit.ownerApp, ownerType: permit.ownerType, ownerId: permit.ownerId,
+          ownerApp: permit.ownerApp, ownerType: permit.ownerType, ownerId: permit.ownerId, ownerLabel: permit.ownerLabel ?? null,
+          // What the client sees (owner, 2026-11-11): their own uploads, and staff files shared with them.
+          sharedWithClient: permit.uploader.kind === 'CLIENT' || Boolean(permit.share),
           name: file.name, contentType: file.type, size: file.size,
           storage: STORAGE, storageKey: file.key, url: file.ufsUrl,
           uploadedByKind: permit.uploader.kind, uploadedById: permit.uploader.id, uploadedByName: permit.uploader.name,

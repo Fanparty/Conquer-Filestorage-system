@@ -20,6 +20,10 @@ model StoredFile {
   ownerType      String    @map("owner_type")
   /// That app's id for the record.
   ownerId        String    @map("owner_id")
+  /// How people know the record, for the home page (e.g. "CR-730264 · PO 123").
+  ownerLabel     String?   @map("owner_label")
+  /// Staff chose to show it to the client (the client's own uploads always are).
+  sharedWithClient Boolean @default(false) @map("shared_with_client")
   /// The name the person gave it.
   name           String
   contentType    String    @map("content_type")
@@ -62,4 +66,27 @@ model FileEvent {
 
   @@index([fileId, createdAt])
   @@map("file_events")
+}
+
+/// Conquer admins who sign in to the home page (owner, 2026-11-11: admins only).
+model Admin {
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  name               String
+  passwordHash       String    @map("password_hash")
+  /// Set for a password someone else chose (the first admin): changed at the next sign-in.
+  mustChangePassword Boolean   @default(true) @map("must_change_password")
+  active             Boolean   @default(true)
+  lastLoginAt        DateTime? @map("last_login_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  @@map("admins")
+}
+
+/// When each calling app last used its token (the home page shows it).
+model CallerUse {
+  caller String   @id
+  lastAt DateTime @map("last_at")
+
+  @@map("caller_uses")
 }

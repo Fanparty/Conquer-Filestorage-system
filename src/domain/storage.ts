@@ -34,6 +34,12 @@ export async function firstBytes(key: string, url: string | null, count = 8): Pr
   return new Uint8Array((await res.arrayBuffer()).slice(0, count));
 }
 
+/** Storage used and the plan's limit, in bytes (the home page's meter). */
+export async function usage(): Promise<{ used: number; limit: number }> {
+  const u = await ut().getUsageInfo();
+  return { used: u.appTotalBytes, limit: u.limitBytes };
+}
+
 export async function remove(key: string): Promise<void> {
   await ut().deleteFiles(key);
 }

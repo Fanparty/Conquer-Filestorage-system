@@ -11,6 +11,10 @@ export type Permit = {
   ownerApp: string;
   ownerType: string;
   ownerId: string;
+  /** How people know the record (e.g. "CR-730264 · PO 123"). */
+  ownerLabel?: string | null;
+  /** Staff uploads shown to the client too (the client's own always are). */
+  share?: boolean;
   via: Caller;
   uploader: { kind: 'STAFF' | 'CLIENT'; id: string | null; name: string | null };
 };

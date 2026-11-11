@@ -33,6 +33,15 @@ function same(given: string, expected: string): boolean {
   return timingSafeEqual(a, b);
 }
 
+/** Notes that a caller used its token now (the home page shows when). Never fails a call. */
+export async function noteUse(caller: Caller): Promise<void> {
+  const { prisma } = await import('@/lib/db');
+  await prisma.callerUse.upsert({ where: { caller }, create: { caller, lastAt: new Date() }, update: { lastAt: new Date() } }).catch(() => {});
+}
+
+export const CALLERS = Object.keys(TOKEN_ENV) as Caller[];
+export const tokenIsSet = (caller: Caller) => (process.env[TOKEN_ENV[caller]] || '').length >= 32;
+
 /** The caller a request's bearer token belongs to, or null. A token not set never matches. */
 export function callerOf(req: Request): Caller | null {
   const header = req.headers.get('authorization') || '';

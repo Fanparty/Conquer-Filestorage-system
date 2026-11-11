@@ -5,7 +5,9 @@ the index of every document clients and staff upload (client POs first, then tic
 deal attachments), issues upload permits and hands out short-lived download links. The files are in
 object storage: UploadThing now; a Vercel Blob driver can replace `src/domain/storage.ts` later.
 
-It has no screens. The CRM, the Customer Portal and the CSP call it.
+The CRM, the Customer Portal and the CSP call it. Its only screens are for Conquer admins: sign-in
+and a home page (health, storage used of the plan, files by app and record, the rules and each app's
+token, recent activity with search).
 
 ## Rules
 
@@ -36,7 +38,8 @@ It has no screens. The CRM, the Customer Portal and the CSP call it.
 | `POST /api/v1/permits` | An upload permit for one record |
 | `GET /api/v1/files?ownerApp=&ownerType=&ownerId=` | A record's files, newest first (`ownerId` may be a comma list) |
 | `GET /api/v1/files/:id/link?by=<name>` | A download link (5 minutes when private) |
-| `DELETE /api/v1/files/:id` `{ by }` | Remove a file |
+| `DELETE /api/v1/files/:id` `{ by, reason }` | Remove a file (staff apps only; the client cannot take back a sent PO) |
+| `PATCH /api/v1/files/:id` `{ sharedWithClient, by }` | Show a staff file to the client, or stop (staff apps only) |
 | `GET /api/health` | Up, and the database answers |
 
 ## Settings
@@ -48,6 +51,7 @@ It has no screens. The CRM, the Customer Portal and the CSP call it.
 | `FILES_PERMIT_SECRET` | Signs upload permits (32+ characters) |
 | `FILES_TOKEN_CRM`, `FILES_TOKEN_PORTAL`, `FILES_TOKEN_CSP` | Each caller's token (32+ characters); the same value is set on that app |
 | `FILES_ALLOWED_ORIGINS` | Comma list of the sites whose pages upload (portal, CRM) |
+| `FILES_SESSION_SECRET` | Signs admin sign-in sessions (32+ characters) |
 
 | `FILES_PRIVATE` | `true` only on a paid UploadThing plan with private files turned on (default off) |
 
@@ -60,3 +64,4 @@ the signed URL expiry**, then set `FILES_PRIVATE=true`.
     npx prisma migrate deploy   # creates the tables (stored_files, file_events)
     npm run dev                 # http://localhost:3013
     npm test
+    ADMIN_EMAIL=… ADMIN_PASSWORD='…' npm run admin:create   # an admin; the password must be changed at the first sign-in

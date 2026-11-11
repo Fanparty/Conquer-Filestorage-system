@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { callerOf, mayTouch } from '@/domain/callers';
+import { callerOf, mayTouch, noteUse } from '@/domain/callers';
 import { PRIVATE, downloadLink } from '@/domain/storage';
 
 /**
@@ -14,6 +14,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const { id } = await ctx.params;
   const file = await prisma.storedFile.findUnique({ where: { id } });
   if (!file || file.deletedAt || !mayTouch(caller, file.ownerApp, file.ownerType)) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
+  // The portal reaches only what the client may see.
+  if (caller === 'PORTAL' && !file.sharedWithClient) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
+  await noteUse(caller);
   const url = await downloadLink(file.storageKey, file.url, 300);
   const by = new URL(req.url).searchParams.get('by')?.slice(0, 160) || null;
   await prisma.fileEvent.create({ data: { fileId: file.id, action: 'LINK', byApp: caller, byName: by } });
