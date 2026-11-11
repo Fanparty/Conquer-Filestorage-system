@@ -28,6 +28,9 @@ model StoredFile {
   storage        String
   /// The storage's own key for the file.
   storageKey     String    @unique @map("storage_key")
+  /// Its address in storage. On UploadThing's free plan files are public at an unguessable
+  /// address (no private ACL), so it is only ever handed out after the calling app checked access.
+  url            String?
   /// Who uploaded it: STAFF (CRM or CSP user) or CLIENT (Customer Portal).
   uploadedByKind String    @map("uploaded_by_kind")
   uploadedById   String?   @map("uploaded_by_id")

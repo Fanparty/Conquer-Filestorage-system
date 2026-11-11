@@ -18,7 +18,9 @@ const each = { maxFileSize: '16MB', maxFileCount: MAX_FILES } as const;
 export const fileRouter = {
   document: f(
     Object.fromEntries(Object.keys(ALLOWED_TYPES).map((type) => [type, each])) as Record<keyof typeof ALLOWED_TYPES, typeof each>,
-    { awaitServerData: true, acl: 'private', contentDisposition: 'attachment' } as const,
+    // Download only. Not private: UploadThing's free plan has no private ACL (owner, 2026-11-11);
+    // set FILES_PRIVATE=true (and private files on the dashboard) once on a paid plan.
+    { awaitServerData: true, contentDisposition: 'attachment', ...(process.env.FILES_PRIVATE === 'true' ? { acl: 'private' } : {}) } as const,
   )
     .middleware(async ({ req, files }) => {
       const permit = await readPermit(req.headers.get('x-conquer-file-permit'));
@@ -33,7 +35,7 @@ export const fileRouter = {
       // A renamed file (say, an .exe called .pdf) is deleted again and never listed.
       let genuine = false;
       try {
-        genuine = looksLike(file.type, await firstBytes(file.key));
+        genuine = looksLike(file.type, await firstBytes(file.key, file.ufsUrl));
       } catch (error) {
         console.error('[files] could not read the first bytes of', file.key, error);
       }
@@ -46,7 +48,7 @@ export const fileRouter = {
         data: {
           ownerApp: permit.ownerApp, ownerType: permit.ownerType, ownerId: permit.ownerId,
           name: file.name, contentType: file.type, size: file.size,
-          storage: STORAGE, storageKey: file.key,
+          storage: STORAGE, storageKey: file.key, url: file.ufsUrl,
           uploadedByKind: permit.uploader.kind, uploadedById: permit.uploader.id, uploadedByName: permit.uploader.name,
           uploadedVia: permit.via,
           events: { create: { action: 'UPLOADED', ...by } },

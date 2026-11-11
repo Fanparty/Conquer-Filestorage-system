@@ -11,7 +11,10 @@ It has no screens. The CRM, the Customer Portal and the CSP call it.
 
 - PDF, JPG, PNG, Excel (.xlsx), Word (.docx); at most **10 MB** a file and **5** at a time.
 - A file's first bytes must match its type, or it is deleted and never listed.
-- Files are **private** and **download only** (no preview). A download link lasts 5 minutes.
+- Files are **download only** (no preview). On UploadThing's free plan they are **public at an
+  unguessable address** (no private ACL): the address is only handed out after the calling app has
+  checked access, but it does not expire. With a paid plan, set `FILES_PRIVATE=true` and turn on
+  private files on the dashboard: links then last 5 minutes.
 - Each calling app has its own token and may only reach its own kinds of record
   (`src/domain/callers.ts`). The calling app checks its user may see or change the record first.
 
@@ -32,7 +35,7 @@ It has no screens. The CRM, the Customer Portal and the CSP call it.
 |---|---|
 | `POST /api/v1/permits` | An upload permit for one record |
 | `GET /api/v1/files?ownerApp=&ownerType=&ownerId=` | A record's files, newest first (`ownerId` may be a comma list) |
-| `GET /api/v1/files/:id/link?by=<name>` | A 5-minute download link |
+| `GET /api/v1/files/:id/link?by=<name>` | A download link (5 minutes when private) |
 | `DELETE /api/v1/files/:id` `{ by }` | Remove a file |
 | `GET /api/health` | Up, and the database answers |
 
@@ -46,8 +49,10 @@ It has no screens. The CRM, the Customer Portal and the CSP call it.
 | `FILES_TOKEN_CRM`, `FILES_TOKEN_PORTAL`, `FILES_TOKEN_CSP` | Each caller's token (32+ characters); the same value is set on that app |
 | `FILES_ALLOWED_ORIGINS` | Comma list of the sites whose pages upload (portal, CRM) |
 
-UploadThing dashboard, per app: turn on **private files (ACL)** and **allow overriding the
-signed URL expiry**, or downloads fail.
+| `FILES_PRIVATE` | `true` only on a paid UploadThing plan with private files turned on (default off) |
+
+Paid plan only: on the UploadThing dashboard turn on **private files (ACL)** and **allow overriding
+the signed URL expiry**, then set `FILES_PRIVATE=true`.
 
 ## Commands
 
