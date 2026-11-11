@@ -5,13 +5,18 @@ the index of every document clients and staff upload (client POs first, then tic
 deal attachments), issues upload permits and hands out short-lived download links. The files are in
 object storage: UploadThing now; a Vercel Blob driver can replace `src/domain/storage.ts` later.
 
-It has no screens. The CRM, the Customer Portal and the CSP call it.
+The CRM, the Customer Portal and the CSP call it. Its only screens are for Conquer admins: sign-in
+and a home page (health, storage used of the plan, files by app and record, the rules and each app's
+token, recent activity with search).
 
 ## Rules
 
 - PDF, JPG, PNG, Excel (.xlsx), Word (.docx); at most **10 MB** a file and **5** at a time.
 - A file's first bytes must match its type, or it is deleted and never listed.
-- Files are **private** and **download only** (no preview). A download link lasts 5 minutes.
+- Files are **download only** (no preview). On UploadThing's free plan they are **public at an
+  unguessable address** (no private ACL): the address is only handed out after the calling app has
+  checked access, but it does not expire. With a paid plan, set `FILES_PRIVATE=true` and turn on
+  private files on the dashboard: links then last 5 minutes.
 - Each calling app has its own token and may only reach its own kinds of record
   (`src/domain/callers.ts`). The calling app checks its user may see or change the record first.
 
@@ -32,8 +37,9 @@ It has no screens. The CRM, the Customer Portal and the CSP call it.
 |---|---|
 | `POST /api/v1/permits` | An upload permit for one record |
 | `GET /api/v1/files?ownerApp=&ownerType=&ownerId=` | A record's files, newest first (`ownerId` may be a comma list) |
-| `GET /api/v1/files/:id/link?by=<name>` | A 5-minute download link |
-| `DELETE /api/v1/files/:id` `{ by }` | Remove a file |
+| `GET /api/v1/files/:id/link?by=<name>` | A download link (5 minutes when private) |
+| `DELETE /api/v1/files/:id` `{ by, reason }` | Remove a file (staff apps only; the client cannot take back a sent PO) |
+| `PATCH /api/v1/files/:id` `{ sharedWithClient, by }` | Show a staff file to the client, or stop (staff apps only) |
 | `GET /api/health` | Up, and the database answers |
 
 ## Settings
@@ -45,9 +51,12 @@ It has no screens. The CRM, the Customer Portal and the CSP call it.
 | `FILES_PERMIT_SECRET` | Signs upload permits (32+ characters) |
 | `FILES_TOKEN_CRM`, `FILES_TOKEN_PORTAL`, `FILES_TOKEN_CSP` | Each caller's token (32+ characters); the same value is set on that app |
 | `FILES_ALLOWED_ORIGINS` | Comma list of the sites whose pages upload (portal, CRM) |
+| `FILES_SESSION_SECRET` | Signs admin sign-in sessions (32+ characters) |
 
-UploadThing dashboard, per app: turn on **private files (ACL)** and **allow overriding the
-signed URL expiry**, or downloads fail.
+| `FILES_PRIVATE` | `true` only on a paid UploadThing plan with private files turned on (default off) |
+
+Paid plan only: on the UploadThing dashboard turn on **private files (ACL)** and **allow overriding
+the signed URL expiry**, then set `FILES_PRIVATE=true`.
 
 ## Commands
 
@@ -55,3 +64,4 @@ signed URL expiry**, or downloads fail.
     npx prisma migrate deploy   # creates the tables (stored_files, file_events)
     npm run dev                 # http://localhost:3013
     npm test
+    ADMIN_EMAIL=… ADMIN_PASSWORD='…' npm run admin:create   # an admin; the password must be changed at the first sign-in

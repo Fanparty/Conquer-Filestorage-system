@@ -14,9 +14,11 @@ const TOKEN_ENV: Record<Caller, string> = {
 };
 
 /** Which records each caller may attach to or read: owner app → record types. */
+// PENDING: files uploaded in a form before its record exists (a PO being sent); the CRM moves
+// them onto the record when it is saved (POST /api/v1/files/claim).
 export const ALLOWED: Record<Caller, Partial<Record<OwnerApp, string[]>>> = {
-  CRM: { CRM: ['PURCHASE_ORDER', 'CLIENT_REQUEST', 'QUOTATION', 'OPPORTUNITY', 'TICKET'] },
-  PORTAL: { CRM: ['PURCHASE_ORDER', 'CLIENT_REQUEST'], CSP: ['TICKET'] },
+  CRM: { CRM: ['PURCHASE_ORDER', 'CLIENT_REQUEST', 'QUOTATION', 'OPPORTUNITY', 'TICKET', 'PENDING'] },
+  PORTAL: { CRM: ['PURCHASE_ORDER', 'CLIENT_REQUEST', 'PENDING'], CSP: ['TICKET'] },
   CSP: { CSP: ['TICKET'] },
 };
 
@@ -32,6 +34,27 @@ function same(given: string, expected: string): boolean {
   }
   return timingSafeEqual(a, b);
 }
+
+/** Notes that a caller used its token now (the home page shows when). Never fails a call. */
+export async function noteUse(caller: Caller): Promise<void> {
+  const { prisma } = await import('@/lib/db');
+  await prisma.callerUse.upsert({ where: { caller }, create: { caller, lastAt: new Date() }, update: { lastAt: new Date() } }).catch(() => {});
+}
+
+export const CALLERS = Object.keys(TOKEN_ENV) as Caller[];
+
+/**
+ * The calling app checked its user against one record (?ownerType=&ownerId=): the file must be on
+ * that record, so an id for someone else's file gets nothing. Required for the portal.
+ */
+export function onRecord(req: Request, file: { ownerType: string; ownerId: string }): boolean {
+  const q = new URL(req.url).searchParams;
+  const type = q.get('ownerType');
+  const id = q.get('ownerId');
+  if (!type || !id) return callerOf(req) !== 'PORTAL';
+  return file.ownerType === type && id.split(',').includes(file.ownerId);
+}
+export const tokenIsSet = (caller: Caller) => (process.env[TOKEN_ENV[caller]] || '').length >= 32;
 
 /** The caller a request's bearer token belongs to, or null. A token not set never matches. */
 export function callerOf(req: Request): Caller | null {
