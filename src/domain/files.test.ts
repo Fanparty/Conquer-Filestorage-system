@@ -2,6 +2,7 @@ import { describe, expect, it, beforeAll } from 'vitest';
 import { checkBatch, looksLike, MAX_FILE_BYTES } from './limits';
 import { callerOf, mayTouch } from './callers';
 import { issuePermit, readPermit } from './permits';
+import { originAllowed } from './origins';
 
 const PDF = 'application/pdf';
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -45,5 +46,16 @@ describe('who may call', () => {
     expect((await readPermit(permit))?.ownerId).toBe('12');
     expect(await readPermit(permit.slice(0, -2) + 'xx')).toBe(null);
     expect(await readPermit(null)).toBe(null);
+  });
+});
+
+describe('which pages may upload', () => {
+  const list = 'https://crm.conquer-tech.com,https://*-conquer.vercel.app';
+  it('exact addresses and patterns; nothing else', () => {
+    expect(originAllowed('https://crm.conquer-tech.com', list)).toBe(true);
+    expect(originAllowed('https://crm-web-git-staging-conquer.vercel.app', list)).toBe(true);
+    expect(originAllowed('https://evil.example.com', list)).toBe(false);
+    expect(originAllowed('https://x-conquer.vercel.app.evil.com', list)).toBe(false);
+    expect(originAllowed('', list)).toBe(false);
   });
 });

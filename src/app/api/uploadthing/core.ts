@@ -9,7 +9,8 @@ const f = createUploadthing();
 
 // UploadThing takes powers of two; 16 MB here, and the real 10 MB limit is checked in the
 // middleware before anything is uploaded.
-const each = { maxFileSize: '16MB', maxFileCount: MAX_FILES } as const;
+// Download only: the browser saves the file instead of showing it.
+const each = { maxFileSize: '16MB', maxFileCount: MAX_FILES, contentDisposition: 'attachment' } as const;
 
 /**
  * One route for every document (owner, 2026-11-11). The browser sends the permit its app's
@@ -20,7 +21,7 @@ export const fileRouter = {
     Object.fromEntries(Object.keys(ALLOWED_TYPES).map((type) => [type, each])) as Record<keyof typeof ALLOWED_TYPES, typeof each>,
     // Download only. Not private: UploadThing's free plan has no private ACL (owner, 2026-11-11);
     // set FILES_PRIVATE=true (and private files on the dashboard) once on a paid plan.
-    { awaitServerData: true, contentDisposition: 'attachment', ...(process.env.FILES_PRIVATE === 'true' ? { acl: 'private' } : {}) } as const,
+    { awaitServerData: true, ...(process.env.FILES_PRIVATE === 'true' ? { acl: 'private' } : {}) } as const,
   )
     .middleware(async ({ req, files }) => {
       const permit = await readPermit(req.headers.get('x-conquer-file-permit'));
