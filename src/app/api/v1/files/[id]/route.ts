@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { callerOf, mayTouch, noteUse } from '@/domain/callers';
+import { callerOf, mayTouch, noteUse, onRecord } from '@/domain/callers';
 import { remove } from '@/domain/storage';
 
 /**
@@ -18,7 +18,7 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
   if (!reason) return NextResponse.json({ success: false, error: 'Give a reason' }, { status: 422 });
   await noteUse(caller);
   const file = await prisma.storedFile.findUnique({ where: { id } });
-  if (!file || file.deletedAt || !mayTouch(caller, file.ownerApp, file.ownerType)) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
+  if (!file || file.deletedAt || !mayTouch(caller, file.ownerApp, file.ownerType) || !onRecord(req, file)) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
   await remove(file.storageKey).catch((e) => console.error('[files] storage delete failed', file.storageKey, e));
   await prisma.storedFile.update({
     where: { id },
@@ -35,7 +35,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const body = (await req.json().catch(() => ({}))) as { sharedWithClient?: boolean; by?: string };
   if (typeof body.sharedWithClient !== 'boolean') return NextResponse.json({ success: false, error: 'sharedWithClient is required' }, { status: 422 });
   const file = await prisma.storedFile.findUnique({ where: { id } });
-  if (!file || file.deletedAt || !mayTouch(caller, file.ownerApp, file.ownerType)) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
+  if (!file || file.deletedAt || !mayTouch(caller, file.ownerApp, file.ownerType) || !onRecord(req, file)) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
   if (file.uploadedByKind === 'CLIENT') return NextResponse.json({ success: false, error: 'The client\'s own files are always theirs to see' }, { status: 409 });
   await noteUse(caller);
   await prisma.storedFile.update({
