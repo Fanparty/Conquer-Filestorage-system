@@ -26,7 +26,7 @@ export const fileRouter = {
     .middleware(async ({ req, files }) => {
       const permit = await readPermit(req.headers.get('x-conquer-file-permit'));
       if (!permit) throw new UploadThingError({ code: 'FORBIDDEN', message: 'This upload link has expired. Reload the page and try again.' });
-      const problems = checkBatch(files);
+      const problems = checkBatch(files, permit.ownerType);
       if (problems.length) throw new UploadThingError({ code: 'BAD_REQUEST', message: problems.join(' ') });
       return { permit };
     })
