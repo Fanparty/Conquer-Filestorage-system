@@ -14,6 +14,10 @@ describe('what may be uploaded', () => {
     expect(checkBatch([{ name: 'x.exe', size: 10, type: 'application/x-msdownload' }])[0]).toMatch(/only PDF/);
     expect(checkBatch(Array.from({ length: 6 }, (_, i) => ({ name: `${i}.pdf`, size: 10, type: PDF })))[0]).toMatch(/at most 5/);
     expect(checkBatch([])).toEqual(['Choose a file to upload.']);
+    // A PO's documents: PDF or Word only (owner, 2026-11-13).
+    expect(checkBatch([{ name: 'po.png', size: 10, type: 'image/png' }], 'PENDING')[0]).toMatch(/only PDF or Word/);
+    expect(checkBatch([{ name: 'po.doc', size: 10, type: 'application/msword' }], 'PURCHASE_ORDER')).toEqual([]);
+    expect(checkBatch([{ name: 'photo.png', size: 10, type: 'image/png' }], 'TICKET')).toEqual([]);
   });
 
   it('a renamed file is caught by its first bytes', () => {

@@ -12,17 +12,28 @@ export const ALLOWED_TYPES: Record<string, { label: string; magic: number[][] }>
   // Excel and Word files are zip archives.
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { label: 'Excel', magic: [[0x50, 0x4b, 0x03, 0x04]] },
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { label: 'Word', magic: [[0x50, 0x4b, 0x03, 0x04]] },
+  // Older Word (.doc): an OLE compound file.
+  'application/msword': { label: 'Word', magic: [[0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]] },
 };
 
-export const TYPE_WORDS = 'PDF, JPG, PNG, Excel (.xlsx) or Word (.docx)';
+/**
+ * A PO's documents are PDF or Word only (owner, 2026-11-13): the PO a client sends or staff
+ * record (PENDING, then PURCHASE_ORDER). Other records keep every allowed type.
+ */
+const PO_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+const PO_OWNERS = ['PENDING', 'PURCHASE_ORDER'];
+export const typesFor = (ownerType?: string) => (ownerType && PO_OWNERS.includes(ownerType) ? PO_TYPES : Object.keys(ALLOWED_TYPES));
+const wordsFor = (ownerType?: string) => (ownerType && PO_OWNERS.includes(ownerType) ? 'PDF or Word (.doc, .docx)' : TYPE_WORDS);
+
+export const TYPE_WORDS = 'PDF, JPG, PNG, Excel (.xlsx) or Word (.doc, .docx)';
 
 /** Problems with the files a browser is about to upload; empty means they may. */
-export function checkBatch(files: readonly { name: string; size: number; type: string }[]): string[] {
+export function checkBatch(files: readonly { name: string; size: number; type: string }[], ownerType?: string): string[] {
   const problems: string[] = [];
   if (files.length === 0) problems.push('Choose a file to upload.');
   if (files.length > MAX_FILES) problems.push(`Upload at most ${MAX_FILES} files at a time.`);
   for (const f of files) {
-    if (!ALLOWED_TYPES[f.type]) problems.push(`${f.name}: only ${TYPE_WORDS} files can be uploaded.`);
+    if (!ALLOWED_TYPES[f.type] || !typesFor(ownerType).includes(f.type)) problems.push(`${f.name}: only ${wordsFor(ownerType)} files can be uploaded.`);
     if (f.size > MAX_FILE_BYTES) problems.push(`${f.name} is larger than 10 MB.`);
     if (f.size === 0) problems.push(`${f.name} is empty.`);
   }

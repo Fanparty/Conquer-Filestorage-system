@@ -38,7 +38,7 @@ token, recent activity with search).
 | `POST /api/v1/permits` | An upload permit for one record |
 | `GET /api/v1/files?ownerApp=&ownerType=&ownerId=` | A record's files, newest first (`ownerId` may be a comma list) |
 | `GET /api/v1/files/:id/link?by=<name>` | A download link (5 minutes when private) |
-| `DELETE /api/v1/files/:id` `{ by, reason }` | Remove a file (staff apps only; the client cannot take back a sent PO) |
+| `DELETE /api/v1/files/:id` `{ by, reason }` | Remove a file (staff apps; the portal only a file still waiting in an unsent form, never a sent PO) |
 | `PATCH /api/v1/files/:id` `{ sharedWithClient, by }` | Show a staff file to the client, or stop (staff apps only) |
 | `GET /api/health` | Up, and the database answers |
 

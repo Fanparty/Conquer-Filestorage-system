@@ -43,5 +43,8 @@
     "esbuild@0.28.2": true,
     "fsevents": false,
     "msgpackr-extract": false
+  },
+  "overrides": {
+    "effect": "3.20.0"
   }
 }

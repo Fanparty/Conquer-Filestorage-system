@@ -10,7 +10,6 @@ import { remove } from '@/domain/storage';
 export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const caller = callerOf(req);
   if (!caller) return NextResponse.json({ success: false, error: 'Not authorised' }, { status: 401 });
-  if (caller === 'PORTAL') return NextResponse.json({ success: false, error: 'A sent document cannot be removed by the client' }, { status: 403 });
   const { id } = await ctx.params;
   const body = (await req.json().catch(() => ({}))) as { by?: string; reason?: string };
   const by = String(body.by || '').slice(0, 160) || null;
@@ -19,6 +18,9 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
   await noteUse(caller);
   const file = await prisma.storedFile.findUnique({ where: { id } });
   if (!file || file.deletedAt || !mayTouch(caller, file.ownerApp, file.ownerType) || !onRecord(req, file)) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
+  // The client removes only what is still waiting in a form they have not sent (owner, 2026-11-13);
+  // a sent document stays.
+  if (caller === 'PORTAL' && file.ownerType !== 'PENDING') return NextResponse.json({ success: false, error: 'A sent document cannot be removed by the client' }, { status: 403 });
   await remove(file.storageKey).catch((e) => console.error('[files] storage delete failed', file.storageKey, e));
   await prisma.storedFile.update({
     where: { id },
