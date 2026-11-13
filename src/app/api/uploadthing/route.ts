@@ -7,6 +7,9 @@ import { originAllowed } from '@/domain/origins';
  * UploadThing's endpoint. The Customer Portal and the CRM upload from their own pages, so their
  * origins (FILES_ALLOWED_ORIGINS, comma-separated) may call it from the browser.
  */
+// A cold start plus the permit check and UploadThing's own call can run past a short default.
+export const maxDuration = 60;
+
 const handler = createRouteHandler({ router: fileRouter, config: { token: process.env.UPLOADTHING_TOKEN } });
 
 function cors(req: Request): Record<string, string> {
